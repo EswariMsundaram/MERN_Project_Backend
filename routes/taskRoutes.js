@@ -7,6 +7,29 @@ const TaskRouter=express.Router()
 //Protects all routes in this router
 TaskRouter.use(authMiddleware)
 
+/**
+* GET/api/projects/taskId
+*/
+TaskRouter.get('/tasks/:taskId',async(req,res)=>{
+    try{
+        const task=await Task.findById(req.params.taskId)
+        if(!task){
+            return res.status(404).json({message:"Task not found"})
+        }
+        //to find the parent project
+        const project= await Project.findById(task.project)
+        if(!project){
+            return res.status(404).json({message:"Parent not found"})
+        }
+
+        if(project.user.toString()!==req.user._id){
+            return res.status(403).status({message:"Not authorized"})
+        }
+        res.json(task)
+    }catch(error){
+        res.status(500).json({error:error.message})
+    }
+})
 
 
 
@@ -65,7 +88,7 @@ TaskRouter.post('/:projectId/tasks',async(req,res)=>{
 
 })
 
-//Helper function for PUT and DELETE
+//Function for PUT and DELETE
 async function verifyTaskOwnership(taskId, userId){
     const task=await Task.findById(taskId)
     if(!task)return {error:"Task not found"}
