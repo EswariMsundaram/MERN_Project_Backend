@@ -8,7 +8,7 @@ const TaskRouter=express.Router()
 TaskRouter.use(authMiddleware)
 
 /**
-* GET/api/projects/taskId
+* GET/api/tasks/:taskId
 */
 TaskRouter.get('/tasks/:taskId',async(req,res)=>{
     try{
@@ -22,15 +22,14 @@ TaskRouter.get('/tasks/:taskId',async(req,res)=>{
             return res.status(404).json({message:"Parent not found"})
         }
 
-        if(project.user.toString()!==req.user._id){
-            return res.status(403).status({message:"Not authorized"})
+        if(project.user.toString()!==req.user._id.toString()){
+            return res.status(403).json({message:"Not authorized"})
         }
         res.json(task)
     }catch(error){
         res.status(500).json({error:error.message})
     }
 })
-
 
 
 /**

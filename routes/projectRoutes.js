@@ -2,6 +2,7 @@ const express=require('express')
 const {authMiddleware}=require('../middlewares/auth')
 const Project=require('../models/Project')
 const projectRouter=express.Router()
+const Task=require('../models/Task')
 
 //Protects all routes in this router
 projectRouter.use(authMiddleware)
@@ -69,8 +70,18 @@ projectRouter.post('/',async(req,res)=>{
  */
 projectRouter.put('/:projectId',async(req,res)=>{
     try{
-        const updateProject=await Project.findById(req.params.projectId,req.body,{new:true})
-        res.json(project)
+        const project=await Project.findById(req.params.projectId)
+        if(!project){
+            return res.status(404).json({message:"Project not found"})
+        } 
+
+        //check the project belongs to the user
+        if(req.user._id!==project.user.toString()){
+            return res.status(403).json({message:"User is not authorized for this project"})
+        }
+
+        const updatedProject=await Project.findByIdAndUpdate(req.params.projectId, req.body,{new:true})
+        res.json(updatedProject)
     }catch(error){
         res.status(500).json({error:error.message})
     }
@@ -81,13 +92,22 @@ projectRouter.put('/:projectId',async(req,res)=>{
  */
 projectRouter.delete('/:projectId',async(req,res)=>{
    try{
-    const updateProject=await Project.findById(req.params.projectId)
-
-    if(req.user._id!==updateProject.user.toString()){
-        return res.status(403).json({message:"User is not authorized to update this project"})
-        res.json({message:"Project deleted"})
+    const project=await Project.findById(req.params.projectId)
+    if(!project){
+        return res.status(404).json({message:"Project not found"})
     }
-    const project=await Project.findByIdAndDelete(req.params.projectId)
+
+    //checks if the logged in user is the owner
+    if(req.user._id!==project.user.toString()){
+        return res.status(403).json({message:"User is not authorized to update this project"}) 
+    }
+
+    //delete all tasks belonging to this project
+    await Task.deleteMany({project:project._id})
+
+    //delete the project completely
+   await Project.findByIdAndDelete(project._id)
+     res.json({message:"Project and related tasks deleted successfully"})
    }catch(error){
     res.status(500).json({error:error.message})
    }
